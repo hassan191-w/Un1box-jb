@@ -196,6 +196,9 @@ class FirmwareService : Service() {
             // A signal death (exit 139 is SIGSEGV) leaves no message of its own; the Swift runtime
             // prints a backtrace for it, into the log this worker reports from.
             put("SWIFT_BACKTRACE", "enable=yes,threads=all")
+                        // The Cydia bootstrap is read by the tar this APK carries, not the phone's toybox, which differs from one
+            // Android release to the next and cannot make hard links in app storage.
+            File(libs, "liblighttouch_tar.so").takeIf { it.canExecute() }?.let { put("LT_TAR", it.path) }
         }
         check(!cancelling) { "Cancelled" }
         stage = "Launching firmwarekit"
