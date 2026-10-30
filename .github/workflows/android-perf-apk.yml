@@ -624,6 +624,11 @@ jobs:
           # The one-shot the preparation boots through (Portable/oneshot), as build.sh builds it.
           "$TOOLS/aarch64-linux-android29-clang" -O2 -Wall -Wextra -Werror -o "$OUT/lighttouch-oneshot" \
             "$GITHUB_WORKSPACE/Portable/oneshot/lighttouch-oneshot.c" >>/tmp/firmwarekit.log 2>&1 \
+            # The tar firmwarekit reads the Cydia bootstrap with on Android (LT_TAR), so every Android release behaves the
+          # same; the phone's toybox differs (options, -tv layout, hard links in app storage).
+          "$TOOLS/aarch64-linux-android29-clang" -O2 -Wall -Wextra -Wl,-z,max-page-size=16384 -o "$OUT/lighttouch-tar" \
+            "$GITHUB_WORKSPACE/Portable/tar/lighttouch-tar.c" -lz >>/tmp/firmwarekit.log 2>&1 \
+            || report /tmp/firmwarekit.log
             || report /tmp/firmwarekit.log
           python3 build-support/stage-notices.py "$OUT/licenses" --checkouts .build-android/checkouts \
             --swift-license "$BUNDLE/swift-android/swift-resources/usr/share/swift/LICENSE.txt" \
