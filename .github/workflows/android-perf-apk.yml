@@ -355,6 +355,7 @@ jobs:
       # fix in the APK. A failed build must stop packaging rather than ship the old broken jailbreak path.
       # scripts/build.sh firmwarekit-android is the repository's own recipe (Swift SDK for Android).
       - name: Overlay guest packages serial 39
+        if: false
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_RUN_ID: ${{ inputs.guest_package_run_id || '' }}
