@@ -113,7 +113,9 @@ providers.gradleProperty("firmwareKitDir").orNull?.let { input ->
     val firmwareKitNotices = layout.buildDirectory.dir("generated/firmwareKitNotices")
     val stage = tasks.register<Copy>("prepareFirmwareKit") {
         from(kit) { include("firmwarekit"); rename { "libfirmwarekit.so" } }
-        from(kit) { include("lighttouch-oneshot"); rename { "liblighttouch_oneshot.so" } }
+       from(kit) { include("lighttouch-oneshot"); rename { "liblighttouch_oneshot.so" } }
+        // The tar firmwarekit reads the Cydia bootstrap with (LT_TAR), the same on every Android release; optional.
+        from(kit) { include("lighttouch-tar"); rename { "liblighttouch_tar.so" } }
         into(firmwareKitJniLibs.map { it.dir("arm64-v8a") })
     }
     val notices = tasks.register<Copy>("prepareFirmwareKitNotices") {
