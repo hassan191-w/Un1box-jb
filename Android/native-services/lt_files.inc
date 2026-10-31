@@ -278,9 +278,22 @@ static int action_files_session(struct session *s)
 	afc_client_t afc = deb_afc_open(s);
 	if (!afc)
 		return 1;
+	/* The guest's own id, so the app keeps one folder per device. Empty when it will not say. */
+	char *udid = NULL;
+	{
+		plist_t node = NULL;
+		if (s->lockdown && lockdownd_get_value(s->lockdown, NULL, "UniqueDeviceID", &node) == LOCKDOWN_E_SUCCESS && node &&
+		    plist_get_node_type(node) == PLIST_STRING)
+			plist_get_string_val(node, &udid);
+		if (node)
+			plist_free(node);
+	}
 	struct buf ready = {0};
-	buf_puts(&ready, "{\"result\":{\"ready\":true}}");
+	buf_puts(&ready, "{\"result\":{\"ready\":true,\"udid\":");
+	json_string(&ready, udid ? udid : "");
+	buf_puts(&ready, "}}");
 	emit(&ready);
+	free(udid);
 	char *line = NULL;
 	size_t cap = 0;
 	ssize_t len;
@@ -311,6 +324,7 @@ static int action_files_session(struct session *s)
 
 static int files_session_main(int argc, char **argv)
 {
+	signal(SIGPIPE, SIG_IGN);
 	const char *socket_path = NULL;
 	for (int i = 2; i < argc; i++) {
 		if (!strcmp(argv[i], "--socket") && i + 1 < argc && !socket_path) {

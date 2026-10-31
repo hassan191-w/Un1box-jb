@@ -1420,7 +1420,20 @@ static void usage_error(const char *detail)
 {
 	emit_error("%s Usage: info|list|crashlog|deb-list|deb-probe|deb-installed --socket PATH; upload-deb --socket PATH --deb PATH --deb-name NAME.deb; deb-queue --socket PATH --deb-name NAME.deb --token HEX32; deb-status --socket PATH --token HEX32; install --socket PATH --ipa PATH --bundle-id ID; syslog --socket PATH --seconds 1..600", detail);
 }
-#include "lt_files.inc
+
+#include "lt_files.inc"
+
+int lt_appservice_main(int argc, char **argv);
+
+int main(int argc, char **argv)
+{
+	if (argc > 1 && strcmp(argv[1], "files-session") == 0)
+		return files_session_main(argc, argv);
+	return lt_appservice_main(argc, argv);
+}
+
+#define main lt_appservice_main
+
 int main(int argc, char **argv)
 {
 	parent_death_guard();
@@ -1430,8 +1443,6 @@ int main(int argc, char **argv)
 		usage_error("Missing action.");
 		return 1;
 	}
-	if (strcmp(argv[1], "files-session") == 0)
-		return files_session_main(argc, argv);
 	const char *action = argv[1];
 	const char *socket_path = NULL, *ipa = NULL, *bundle_id = NULL, *seconds_text = NULL;
 	const char *deb = NULL, *deb_name = NULL, *token = NULL;
