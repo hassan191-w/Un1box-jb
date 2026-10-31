@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * through the guest's AFC service, by way of the app-service helper's files-session.
  */
 object SharedFiles {
-    /** The running guest's usbmux socket and device id, set by MainActivity; empty while no guest runs. */
+    /** Unused now (the screen reads the socket from StoreInstaller); kept so an earlier MainActivity edit still builds. */
     @Volatile var socket: String = ""
     @Volatile var deviceId: String = ""
 
@@ -136,6 +136,9 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
     private val process: Process
     private val reader: BufferedReader
     private val writer: OutputStream
+
+    /** The guest's own device id (empty if it would not say), which keeps one shared folder per device. */
+    val udid: String
     @Volatile private var lastActivity = System.nanoTime()
     @Volatile private var closed = false
 
@@ -157,7 +160,7 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
             } catch (_: InterruptedException) {
             }
         }, "shared-files-watchdog").apply { isDaemon = true; start() }
-        read() // "ready", or the reason the guest could not be reached
+        udid = read().optString("udid") // "ready", or the reason the guest could not be reached
     }
 
     private fun read(): JSONObject {
@@ -345,10 +348,11 @@ internal object SharedFilesSync {
     private val lock = Any()
 
     /** A sentence for the screen: what was done, or why it could not be. */
-    fun run(context: Context, socket: String, deviceId: String): String = synchronized(lock) {
-        val folder = SharedFiles.folder(context, deviceId)
-        val stateFile = File(context.filesDir, "shared-state-${SharedFiles.safe(deviceId)}.json")
+    fun run(context: Context, socket: String): String = synchronized(lock) {
         FilesSession(context, socket).use { session ->
+            val device = SharedFiles.safe(session.udid)
+            val folder = SharedFiles.folder(context, device)
+            val stateFile = File(context.filesDir, "shared-state-$device.json")
             val sync = SharedFolderSync(folder, SharedFiles.REMOTE, session, stateFile)
             sync.run()
             val done = "Sent ${sync.sent}, received ${sync.received}, removed ${sync.removed}."

@@ -48,31 +48,33 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    val socket = SharedFiles.socket
-    val deviceId = SharedFiles.deviceId
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Shared files", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Files you put in the Un1box folder on this phone appear in /var/mobile/Media/Un1box on the iOS device, " +
-                "and files it puts there appear here. Changes are copied when you press Sync now.",
+                "and files it puts there appear here. Changes are copied when you press Sync now, while the device is running.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        if (socket.isEmpty()) Text("Start a device first, then come back here.", style = MaterialTheme.typography.bodyMedium)
         Button(
             onClick = {
-                busy = true
-                message = ""
                 val app = context.applicationContext
-                Thread({
-                    message = try {
-                        SharedFilesSync.run(app, socket, deviceId)
-                    } catch (e: Exception) {
-                        "Could not sync: ${e.message}"
-                    }
-                    busy = false
-                }, "shared-files-sync").start()
+                val socket = StoreInstaller.of(app).socket
+                if (socket.isNullOrEmpty()) {
+                    message = "Start a device in Un1box first, then press Sync now again."
+                } else {
+                    busy = true
+                    message = ""
+                    Thread({
+                        message = try {
+                            SharedFilesSync.run(app, socket)
+                        } catch (e: Exception) {
+                            "Could not sync: ${e.message}"
+                        }
+                        busy = false
+                    }, "shared-files-sync").start()
+                }
             },
-            enabled = !busy && socket.isNotEmpty(),
+            enabled = !busy,
         ) { Text(if (busy) "Syncing..." else "Sync now") }
         OutlinedButton(onClick = { message = openFolder(context) }) { Text("Open the folder in Files") }
         if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyMedium)
