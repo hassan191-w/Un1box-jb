@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -81,6 +82,9 @@ private fun TopBar(host: GuestHost) {
         } }
         IconButton(onClick = { host.navigate(Screen.STORE) }, modifier = Modifier.testTag("open_store")) { Icon(LtIcons.Bag, "Legacy Store") }
         IconButton(onClick = { host.navigate(Screen.CYDIA) }, modifier = Modifier.testTag("open_cydia")) { Icon(LtIcons.Package, "Cydia") }
+        val filesContext = androidx.compose.ui.platform.LocalContext.current
+        IconButton(onClick = { filesContext.startActivity(android.content.Intent(filesContext, SharedFilesActivity::class.java)) },
+            modifier = Modifier.testTag("open_files")) { Icon(Icons.Filled.Share, "Shared files") }
         IconButton(onClick = { host.navigate(Screen.SETTINGS) }, modifier = Modifier.testTag("open_settings")) { Icon(Icons.Filled.Settings, "Settings") }
     }
 }
