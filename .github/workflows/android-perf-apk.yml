@@ -630,7 +630,7 @@ jobs:
           "$TOOLS/aarch64-linux-android29-clang" -O2 -Wall -Wextra -Wl,-z,max-page-size=16384 -o "$OUT/lighttouch-tar" \
             "$GITHUB_WORKSPACE/Portable/tar/lighttouch-tar.c" -lz >>/tmp/firmwarekit.log 2>&1 \
             || report /tmp/firmwarekit.log
-            || report /tmp/firmwarekit.log
+         
           python3 build-support/stage-notices.py "$OUT/licenses" --checkouts .build-android/checkouts \
             --swift-license "$BUNDLE/swift-android/swift-resources/usr/share/swift/LICENSE.txt" \
             --source-reference "https://github.com/$GITHUB_REPOSITORY/tree/$SOURCE_REF" >>/tmp/firmwarekit.log 2>&1 \
