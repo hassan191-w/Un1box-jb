@@ -40,6 +40,14 @@ object SharedFiles {
 
     /** This device's side of the shared folder. */
     fun folder(context: Context, deviceId: String): File = File(base(context), safe(deviceId)).apply { mkdirs() }
+
+    /** The device whose folder was synced last, or null before any sync. */
+    fun lastDevice(context: Context): String? =
+        context.getSharedPreferences("shared_files", Context.MODE_PRIVATE).getString("lastDevice", null)
+
+    internal fun rememberDevice(context: Context, device: String) {
+        context.getSharedPreferences("shared_files", Context.MODE_PRIVATE).edit().putString("lastDevice", device).apply()
+    }
 }
 
 /** Makes the shared folder appear in the Files app as "Un1box", one folder per device, with create and delete. */
@@ -421,6 +429,7 @@ internal object SharedFilesSync {
     private fun once(context: Context, socket: String): SyncOutcome =
         FilesSession(context, socket).use { session ->
             val device = SharedFiles.safe(session.udid)
+            SharedFiles.rememberDevice(context, device)
             val folder = SharedFiles.folder(context, device)
             val stateFile = File(context.filesDir, "shared-state-$device.json")
             val sync = SharedFolderSync(folder, SharedFiles.REMOTE, session, stateFile)

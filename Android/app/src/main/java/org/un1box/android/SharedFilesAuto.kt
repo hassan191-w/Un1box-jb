@@ -43,6 +43,7 @@ internal object SharedFilesAuto {
         var retryAt = 0L
         var failures = 0
         var tick = 0
+        var serviceOn = false
         while (true) {
             try {
                 Thread.sleep(3000)
@@ -51,9 +52,18 @@ internal object SharedFilesAuto {
             }
             val current = if (enabled(app)) StoreInstaller.of(app).socket.orEmpty() else ""
             if (current.isEmpty()) {
+                if (serviceOn) {
+                    SharedFilesService.stop(app)
+                    serviceOn = false
+                }
                 socket = ""
                 synced = false
                 continue
+            }
+            if (!serviceOn) {
+                // While a device runs, a notification keeps this process, and so the sync, alive in the background.
+                SharedFilesService.start(app)
+                serviceOn = true
             }
             if (current != socket) {
                 socket = current
