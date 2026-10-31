@@ -205,7 +205,8 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
  * Keeps this device's Android folder and the guest's /Un1box alike, in both directions. What each side had at the
  * last sync is remembered, so a file that is new or changed on one side is copied to the other, and one that was
  * deleted on one side (and not changed on the other) is deleted on the other too. A file changed on both sides
- * goes to whichever was changed last. Folders are made on both sides but never deleted.
+ * goes to whichever was changed last. A folder is made on both sides, and one deleted on a side is deleted on the other
+ * too when nothing inside it has changed since the last sync; otherwise it stays, with what changed.
  */
 internal class SharedFolderSync(
     private val local: File,
@@ -216,6 +217,9 @@ internal class SharedFolderSync(
     private data class Seen(val local: Long, val remote: Long, val size: Long)
 
     private val state = HashMap<String, Seen>()
+
+    /** The folders that were on both sides at the last sync. */
+    private val knownDirs = HashSet<String>()
     var sent = 0
     var received = 0
     var removed = 0
@@ -261,16 +265,58 @@ internal class SharedFolderSync(
                 continue
             }
             if ((r != null && r.dir) || (l != null && l.isDirectory)) {
-                attempt {
-                    if (r == null) io.mkdir(remotePath(path))
-                    if (l == null) File(dir, name).mkdirs()
-                    syncDir(path)
-                }
+                attempt { syncFolder(path, name, dir, l, r) }
                 continue
             }
             attempt { syncFile(path, l, r) }
         }
         attempt { refresh(relative, dir) }
+    }
+
+    /** A folder on one side or both: made on the other side, or deleted there if it was deleted here. */
+    private fun syncFolder(path: String, name: String, parent: File, l: File?, r: RemoteEntry?) {
+        val remote = remotePath(path)
+        val known = path in knownDirs
+        if (l == null && known && remoteTreeUnchanged(remote, path)) {
+            removeRemoteTree(remote, path)
+            return
+        }
+        if (r == null && l != null && known && localTreeUnchanged(l, path)) {
+            l.deleteRecursively()
+            forget(path)
+            return
+        }
+        if (r == null) io.mkdir(remote)
+        if (l == null) File(parent, name).mkdirs()
+        syncDir(path)
+        knownDirs.add(path)
+    }
+
+    /** Whether every file in this folder is as it was at the last sync, with nothing new. */
+    private fun localTreeUnchanged(dir: File, relative: String): Boolean = dir.listFiles().orEmpty().all { f ->
+        val path = "$relative/${f.name}"
+        if (f.isDirectory) localTreeUnchanged(f, path)
+        else state[path]?.let { it.local == f.lastModified() && it.size == f.length() } == true
+    }
+
+    private fun remoteTreeUnchanged(remoteDir: String, relative: String): Boolean = io.list(remoteDir).all { e ->
+        val path = "$relative/${e.name}"
+        if (e.dir) remoteTreeUnchanged("$remoteDir/${e.name}", path)
+        else state[path]?.let { it.remote == e.mtime && it.size == e.size } == true
+    }
+
+    private fun removeRemoteTree(remoteDir: String, relative: String) {
+        for (e in io.list(remoteDir)) {
+            if (e.dir) removeRemoteTree("$remoteDir/${e.name}", "$relative/${e.name}") else io.remove("$remoteDir/${e.name}")
+        }
+        io.remove(remoteDir)
+        forget(relative)
+    }
+
+    /** Drops what is remembered about a folder and everything in it. */
+    private fun forget(path: String) {
+        state.keys.removeAll { it.startsWith("$path/") }
+        knownDirs.removeAll { it == path || it.startsWith("$path/") }
     }
 
     private fun syncFile(path: String, l: File?, r: RemoteEntry?) {
@@ -328,17 +374,22 @@ internal class SharedFolderSync(
 
     private fun load() {
         state.clear()
+        knownDirs.clear()
         val text = runCatching { stateFile.readText() }.getOrNull() ?: return
         val saved = runCatching { JSONObject(text) }.getOrNull() ?: return
-        for (key in saved.keys()) {
-            val values = saved.optJSONArray(key) ?: continue
+        // The first version kept the files at the top level.
+        val files = saved.optJSONObject("files") ?: saved
+        for (key in files.keys()) {
+            val values = files.optJSONArray(key) ?: continue
             if (values.length() == 3) state[key] = Seen(values.getLong(0), values.getLong(1), values.getLong(2))
         }
+        saved.optJSONArray("dirs")?.let { dirs -> for (i in 0 until dirs.length()) knownDirs.add(dirs.getString(i)) }
     }
 
     private fun save() {
-        val saved = JSONObject()
-        for ((key, seen) in state) saved.put(key, JSONArray(listOf(seen.local, seen.remote, seen.size)))
+        val files = JSONObject()
+        for ((key, seen) in state) files.put(key, JSONArray(listOf(seen.local, seen.remote, seen.size)))
+        val saved = JSONObject().put("files", files).put("dirs", JSONArray(knownDirs.toList()))
         runCatching { stateFile.writeText(saved.toString()) }
     }
 }
