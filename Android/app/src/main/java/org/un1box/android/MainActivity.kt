@@ -378,7 +378,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, GuestHost {
                             profileNotice = b.getString("profileNotice") ?: ""
                             sessionOwned = b.getBoolean("sessionStarted")
                             val socket = if (status == "running") b.getString("usbMuxSocket") ?: "" else ""
-                            SharedFiles.socket = socket; SharedFiles.deviceId = selected?.id ?: 
+                            //SharedFiles.socket = socket; SharedFiles.deviceId = selected?.id ?: 
                             if (socket != muxSocket) { muxSocket = socket; store.guestChanged(); if (socket.isNotEmpty() && overlay == Screen.STORE) store.refreshGuest() }
                             appServicesError = b.getString("appServicesError") ?: ""
                             cameraStatus = b.getString("cameraStatus") ?: ""
