@@ -46,7 +46,11 @@ object SharedFiles {
 class SharedFolderProvider : DocumentsProvider() {
     private val base: File get() = SharedFiles.base(context!!)
 
-    override fun onCreate() = true
+    override fun onCreate(): Boolean {
+        // Android creates the app's providers when its process starts, which is when automatic sync can begin.
+        context?.let { SharedFilesAuto.start(it) }
+        return true
+    }
 
     override fun queryRoots(projection: Array<out String>?): Cursor {
         val cursor = MatrixCursor(projection ?: ROOT_COLUMNS)
@@ -394,12 +398,27 @@ internal class SharedFolderSync(
     }
 }
 
+internal class SyncOutcome(val message: String, val remoteSignature: String)
+
 /** One sync of the running guest's shared folder; calls are serialised. */
 internal object SharedFilesSync {
     private val lock = Any()
 
-    /** A sentence for the screen: what was done, or why it could not be. */
-    fun run(context: Context, socket: String): String = synchronized(lock) {
+    /** One sync, tried up to three times: the guest may still be starting, or still closing the last session. */
+    fun run(context: Context, socket: String): SyncOutcome = synchronized(lock) {
+        var failure: Exception = FilesSession.Failure("The guest did not answer.")
+        for (attempt in 1..3) {
+            try {
+                return@synchronized once(context, socket)
+            } catch (e: FilesSession.Failure) {
+                failure = e
+                if (attempt < 3) Thread.sleep(2000)
+            }
+        }
+        throw failure
+    }
+
+    private fun once(context: Context, socket: String): SyncOutcome =
         FilesSession(context, socket).use { session ->
             val device = SharedFiles.safe(session.udid)
             val folder = SharedFiles.folder(context, device)
@@ -407,7 +426,34 @@ internal object SharedFilesSync {
             val sync = SharedFolderSync(folder, SharedFiles.REMOTE, session, stateFile)
             sync.run()
             val done = "Sent ${sync.sent}, received ${sync.received}, removed ${sync.removed}."
-            if (sync.failed == 0) done else "$done ${sync.failed} could not be copied: ${sync.lastError}"
+            val message = if (sync.failed == 0) done else "$done ${sync.failed} could not be copied: ${sync.lastError}"
+            SyncOutcome(message, remoteSignature(session))
         }
+
+    /** The guest's folder as one number, to notice a change made there. */
+    fun peek(context: Context, socket: String): String =
+        synchronized(lock) { FilesSession(context, socket).use { remoteSignature(it) } }
+
+    private fun remoteSignature(io: FilesSession): String {
+        val text = StringBuilder()
+        fun walk(dir: String) {
+            for (e in io.list(dir).sortedBy { it.name }) {
+                text.append(dir).append('/').append(e.name).append('|').append(e.dir).append('|')
+                    .append(e.size).append('|').append(e.mtime).append('\n')
+                if (e.dir) walk("$dir/${e.name}")
+            }
+        }
+        walk(SharedFiles.REMOTE)
+        return text.toString().hashCode().toString()
+    }
+
+    /** The phone's side of the shared folders as one number. */
+    fun localSignature(context: Context): String {
+        val base = SharedFiles.base(context)
+        val text = StringBuilder()
+        base.walkTopDown().filter { it != base && !it.name.endsWith(".part") }.sortedBy { it.path }.forEach {
+            text.append(it.path).append('|').append(it.length()).append('|').append(it.lastModified()).append('\n')
+        }
+        return text.toString().hashCode().toString()
     }
 }

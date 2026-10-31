@@ -9,12 +9,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,17 +24,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Files shared with the running guest: Sync now copies what is new or changed between this device's Un1box folder
- * and /var/mobile/Media/Un1box on the iOS device, in both directions (see [SharedFolderSync]).
+ * Files shared with the running guest: the Un1box folder on this phone and /var/mobile/Media/Un1box on the iOS
+ * device are kept alike, in both directions, by themselves (see [SharedFilesAuto]) or when Sync now is pressed.
  */
 class SharedFilesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SharedFilesAuto.start(this)
         setContent {
             DarkTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -48,13 +52,19 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    var auto by remember { mutableStateOf(SharedFilesAuto.enabled(context)) }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Shared files", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Files you put in the Un1box folder on this phone appear in /var/mobile/Media/Un1box on the iOS device, " +
-                "and files it puts there appear here. Changes are copied when you press Sync now, while the device is running.",
+                "and files it puts there appear here. While the device is running they are copied by themselves within " +
+                "a few seconds, or press Sync now.",
             style = MaterialTheme.typography.bodyMedium,
         )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(checked = auto, onCheckedChange = { auto = it; SharedFilesAuto.setEnabled(context, it) })
+            Text("Sync automatically")
+        }
         Button(
             onClick = {
                 val app = context.applicationContext
@@ -66,7 +76,7 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
                     message = ""
                     Thread({
                         message = try {
-                            SharedFilesSync.run(app, socket)
+                            SharedFilesSync.run(app, socket).message
                         } catch (e: Exception) {
                             "Could not sync: ${e.message}"
                         }
@@ -78,6 +88,7 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
         ) { Text(if (busy) "Syncing..." else "Sync now") }
         OutlinedButton(onClick = { message = openFolder(context) }) { Text("Open the folder in Files") }
         if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyMedium)
+        if (SharedFilesAuto.status.isNotEmpty()) Text(SharedFilesAuto.status, style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = onClose) { Text("Close") }
     }
 }
