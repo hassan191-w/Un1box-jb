@@ -20,6 +20,8 @@
         </service>
         <service android:name=".DownloadService" android:exported="false" android:foregroundServiceType="dataSync" />
         <activity android:name=".SharedFilesActivity" android:exported="false" android:label="Shared files" />
+        <activity android:name=".IosFilesActivity" android:exported="false" android:label="iOS files" />
+        <activity android:name=".DeviceBackupActivity" android:exported="false" android:label="Back up and restore" />
         <activity android:name=".SendToIosActivity" android:exported="true" android:label="Send to iOS"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
