@@ -92,6 +92,9 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
         OutlinedButton(onClick = { context.startActivity(Intent(context, DeviceBackupActivity::class.java)) }) {
             Text("Back up or restore a device")
         }
+        OutlinedButton(onClick = { context.startActivity(Intent(context, ScreenToolsActivity::class.java)) }) {
+            Text("Screen tools: browser view, recording")
+        }
         if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyMedium)
         if (SharedFilesAuto.status.isNotEmpty()) Text(SharedFilesAuto.status, style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = onClose) { Text("Close") }

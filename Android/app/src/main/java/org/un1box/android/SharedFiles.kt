@@ -153,6 +153,7 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
     val udid: String
     @Volatile private var lastActivity = System.nanoTime()
     @Volatile private var closed = false
+    @Volatile private var idleLimit = 40L // seconds; longer once the guest has answered
 
     init {
         val helper = File(context.applicationInfo.nativeLibraryDir, "liblt_appservice.so")
@@ -164,7 +165,7 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
             try {
                 while (!closed && process.isAlive) {
                     Thread.sleep(1000)
-                    if (TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - lastActivity) > 600) {
+                    if (TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - lastActivity) > idleLimit) {
                         process.destroyForcibly()
                         break
                     }
@@ -173,6 +174,7 @@ internal class FilesSession(context: Context, socket: String) : Closeable {
             }
         }, "shared-files-watchdog").apply { isDaemon = true; start() }
         udid = read().optString("udid") // "ready", or the reason the guest could not be reached
+        idleLimit = 600L
     }
 
     private fun read(): JSONObject {

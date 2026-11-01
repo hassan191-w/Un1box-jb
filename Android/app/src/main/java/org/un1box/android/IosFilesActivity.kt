@@ -58,7 +58,8 @@ class IosFilesActivity : ComponentActivity() {
                 path = dir
                 status = if (list.isEmpty()) "This folder is empty." else ""
             } catch (e: Exception) {
-                status = "Could not read the device: ${e.message}"
+                session = null
+                status = "Could not read the device: ${e.javaClass.simpleName}: ${e.message}"
             }
             busy = false
         }
@@ -117,6 +118,9 @@ class IosFilesActivity : ComponentActivity() {
                             }
                         }
                         if (status.isNotEmpty()) Text(status, style = MaterialTheme.typography.bodyMedium)
+                        if (status.startsWith("Could not")) {
+                            OutlinedButton(onClick = { go(path) }, enabled = !busy) { Text("Try again") }
+                        }
                         LazyColumn(Modifier.weight(1f)) {
                             items(entries, key = { it.name }) { entry ->
                                 Row(
