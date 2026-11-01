@@ -21,16 +21,16 @@ static int files_local_valid(const char *path)
 	return n > 1 && n < 1000 && path[0] == '/';
 }
 
-/* 0 = read, 1 = absent, -1 = failed (an error line has been written). */
-static int files_info(afc_client_t afc, const char *path, struct file_info *out)
+/* 0 = read, 1 = absent, -1 = failed (nothing is written). */
+static int files_info_quiet(afc_client_t afc, const char *path, struct file_info *out)
 {
 	char **info = NULL;
 	afc_error_t err = afc_get_file_info(afc, path, &info);
+	memset(out, 0, sizeof(*out));
 	if (err == AFC_E_OBJECT_NOT_FOUND)
 		return 1;
-	if (afc_check(err, "read iOS file information"))
+	if (err != AFC_E_SUCCESS)
 		return -1;
-	memset(out, 0, sizeof(*out));
 	for (size_t i = 0; info && info[i] && info[i + 1]; i += 2) {
 		if (!strcmp(info[i], "st_ifmt")) {
 			out->is_dir = !strcmp(info[i + 1], "S_IFDIR");
@@ -44,6 +44,15 @@ static int files_info(afc_client_t afc, const char *path, struct file_info *out)
 	if (info)
 		afc_dictionary_free(info);
 	return 0;
+}
+
+/* 0 = read, 1 = absent, -1 = failed (an error line has been written). */
+static int files_info(afc_client_t afc, const char *path, struct file_info *out)
+{
+	int rc = files_info_quiet(afc, path, out);
+	if (rc < 0)
+		emit_error("Could not read information about %s on the iOS device.", path);
+	return rc;
 }
 
 static int files_list(afc_client_t afc, const char *dir)
@@ -70,11 +79,12 @@ static int files_list(afc_client_t afc, const char *dir)
 		char path[1100];
 		snprintf(path, sizeof(path), "%s%s%s", dir, strcmp(dir, "/") ? "/" : "", names[i]);
 		struct file_info fi;
-		int rc = files_info(afc, path, &fi);
-		if (rc < 0)
-			goto fail;
-		if (rc == 1 || fi.is_link)
+		int rc = files_info_quiet(afc, path, &fi);
+		if (rc == 1 || (rc == 0 && fi.is_link))
 			continue;
+		/* An entry the device will not describe is still listed, as an empty file. */
+		if (rc < 0)
+			memset(&fi, 0, sizeof(fi));
 		if (++count > 5000) {
 			emit_error("The iOS folder has more than 5000 items.");
 			goto fail;
