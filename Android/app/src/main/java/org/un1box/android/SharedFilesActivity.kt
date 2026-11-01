@@ -58,7 +58,8 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
         Text(
             "Files you put in the Un1box folder on this phone appear in /var/mobile/Media/Un1box on the iOS device, " +
                 "and files it puts there appear here. While the device is running they are copied by themselves within " +
-                "a few seconds, or press Sync now.",
+                "a few seconds, or press Sync now. A notification keeps this going when you leave the app. " +
+                "You can also share any file to Send to iOS from other apps.",
             style = MaterialTheme.typography.bodyMedium,
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

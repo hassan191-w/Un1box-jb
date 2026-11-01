@@ -73,8 +73,12 @@ class SendToIosActivity : Activity() {
         }
         val socket = StoreInstaller.of(app).socket
         if (socket.isNullOrEmpty()) return "Saved $count in the Un1box folder; it copies when the device runs."
-        SharedFilesSync.run(app, socket)
-        return "Sent $count to iOS."
+        return try {
+            SharedFilesSync.run(app, socket)
+            "Sent $count to iOS."
+        } catch (e: Exception) {
+            "Saved $count in the Un1box folder, but the sync failed (${e.message}); it will retry by itself."
+        }
     }
 
     private fun nameOf(uri: Uri): String {

@@ -37,9 +37,9 @@ class SharedFilesService : Service() {
         private const val CHANNEL = "shared_files"
         private const val NOTIFICATION_ID = 41
 
-        fun start(context: Context) {
-            runCatching { context.startForegroundService(Intent(context, SharedFilesService::class.java)) }
-        }
+        /** False when Android would not start it (the app is in the background); the caller tries again later. */
+        fun start(context: Context): Boolean =
+            runCatching { context.startForegroundService(Intent(context, SharedFilesService::class.java)) }.isSuccess
 
         fun stop(context: Context) {
             context.stopService(Intent(context, SharedFilesService::class.java))

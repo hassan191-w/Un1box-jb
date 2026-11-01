@@ -62,8 +62,7 @@ internal object SharedFilesAuto {
             }
             if (!serviceOn) {
                 // While a device runs, a notification keeps this process, and so the sync, alive in the background.
-                SharedFilesService.start(app)
-                serviceOn = true
+                serviceOn = SharedFilesService.start(app)
             }
             if (current != socket) {
                 socket = current
