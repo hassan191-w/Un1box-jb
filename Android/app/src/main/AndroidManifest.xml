@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -22,6 +23,8 @@
         <activity android:name=".SharedFilesActivity" android:exported="false" android:label="Shared files" />
         <activity android:name=".IosFilesActivity" android:exported="false" android:label="iOS files" />
         <activity android:name=".DeviceBackupActivity" android:exported="false" android:label="Back up and restore" />
+        <activity android:name=".ScreenToolsActivity" android:exported="false" android:label="Screen tools" />
+        <service android:name=".ScreenShareService" android:exported="false" android:foregroundServiceType="mediaProjection" />
         <activity android:name=".SendToIosActivity" android:exported="true" android:label="Send to iOS"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
