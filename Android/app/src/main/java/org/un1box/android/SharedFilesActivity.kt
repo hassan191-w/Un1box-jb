@@ -88,6 +88,10 @@ private fun SharedFilesScreen(onClose: () -> Unit) {
             enabled = !busy,
         ) { Text(if (busy) "Syncing..." else "Sync now") }
         OutlinedButton(onClick = { message = openFolder(context) }) { Text("Open the folder in Files") }
+        OutlinedButton(onClick = { context.startActivity(Intent(context, IosFilesActivity::class.java)) }) { Text("Browse iOS files") }
+        OutlinedButton(onClick = { context.startActivity(Intent(context, DeviceBackupActivity::class.java)) }) {
+            Text("Back up or restore a device")
+        }
         if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyMedium)
         if (SharedFilesAuto.status.isNotEmpty()) Text(SharedFilesAuto.status, style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = onClose) { Text("Close") }
